@@ -1,0 +1,140 @@
+.TH mbmesh 1 "5 February 2026" "MB-System 5.x" "MB-System Manual Pages"
+.SH NAME
+\fBmbmesh\fP \- Generate triangular meshes from multibeam bathymetry data
+
+.SH VERSION
+Version 5.x
+
+.SH SYNOPSIS
+\fBmbmesh\fP \fB-I\fP\fIinputfile\fP \fB-O\fP\fIoutputfile\fP 
+[\fB-A\fP\fIalgorithm\fP] [\fB-F\fP\fIformat\fP] [\fB-R\fP\fIresolution\fP]
+[\fB-Q\fP\fIqualitythreshold\fP] [\fB-N\fP\fIrefineiterations\fP] 
+[\fB-S\fP\fIsmoothiterations\fP] [\fB-B\fP] [\fB-P\fP\fIprojection\fP] 
+[\fB-G\fP\fIregion\fP] [\fB-V\fP] [\fB-H\fP]
+
+.SH DESCRIPTION
+\fBmbmesh\fP generates high-quality triangular meshes from multibeam bathymetry 
+data. The program supports multiple mesh generation algorithms and can output 
+meshes in various formats suitable for numerical modeling, visualization, and 
+analysis applications.
+
+The tool is designed to integrate seamlessly with other MB-System utilities and 
+supports GMT for geographic projections and coordinate transformations. Mesh 
+quality can be controlled through various parameters, and the program includes 
+refinement and smoothing capabilities to optimize mesh geometry.
+
+.SH REQUIRED ARGUMENTS
+.TP
+.B -I\fIinputfile\fP
+Input bathymetry data file. Can be an MB-System datalist file, GMT grid file, 
+XYZ text file, or direct multibeam data file in any format supported by MB-System.
+
+.TP  
+.B -O\fIoutputfile\fP
+Output mesh file name. The actual output may consist of multiple files depending 
+on the chosen format.
+
+.SH OPTIONAL ARGUMENTS
+.TP
+.B -A\fIalgorithm\fP
+Mesh generation algorithm (default: 1):
+.br
+    1 = Delaunay triangulation
+.br
+    2 = Grid-based meshing  
+.br
+    3 = Adaptive meshing
+
+.TP
+.B -F\fIformat\fP  
+Output format (default: 1):
+.br
+    1 = GMT format
+.br
+    2 = VTK format
+.br
+    3 = OBJ format
+.br
+    4 = STL format
+
+.TP
+.B -R\fIresolution\fP
+Target mesh resolution in map units. If not specified, the program will 
+automatically determine an appropriate resolution based on the input data density.
+
+.TP
+.B -Q\fIqualitythreshold\fP
+Minimum acceptable triangle quality threshold (default: 0.3). Triangles with 
+quality below this value will be targeted for refinement.
+
+.TP
+.B -N\fIrefineiterations\fP
+Number of mesh refinement iterations to perform (default: 0). Refinement 
+improves triangle quality by splitting poor elements and adding vertices.
+
+.TP
+.B -S\fIsmoothiterations\fP  
+Number of mesh smoothing iterations to perform (default: 0). Smoothing improves 
+triangle shapes by adjusting vertex positions.
+
+.TP
+.B -B
+Preserve boundary features during mesh generation and refinement. This helps 
+maintain the integrity of complex coastlines and underwater features.
+
+.TP
+.B -P\fIprojection\fP
+GMT map projection string for coordinate transformation. Use GMT projection 
+syntax (e.g., "M6i" for Mercator projection).
+
+.TP
+.B -G\fIregion\fP
+Geographic region specification in GMT format (west/east/south/north). Used 
+for coordinate transformations and data bounds checking.
+
+.TP
+.B -V
+Increase verbosity level. Multiple -V flags increase verbosity further.
+
+.TP
+.B -H
+Display help message and exit.
+
+.SH EXAMPLES
+
+Generate a Delaunay triangulation mesh from a GMT grid file:
+.br
+    \fBmbmesh -I bathymetry.grd -O mesh_delaunay.dat -A 1 -F 1 -V\fP
+
+Create an adaptive mesh with refinement for high-resolution modeling:
+.br
+    \fBmbmesh -I datalist.mb-1 -O adaptive_mesh.vtk -A 3 -F 2 -N 3 -S 2 -Q 0.5 -B -V\fP
+
+Generate a grid-based mesh with specific resolution:
+.br
+    \fBmbmesh -I survey_data.xyz -O grid_mesh.obj -A 2 -F 3 -R 25.0 -V\fP
+
+.SH SEE ALSO
+\fBmbgrid\fP(1), \fBmbcontour\fP(1), \fBmbm_plot\fP(1), \fBmbsystem\fP(1)
+
+.SH BUGS
+This is a new tool and some features are still under development. Please report 
+bugs to the MB-System development team.
+
+.SH AUTHOR
+Lyn Larson
+.br
+Monterey Bay Aquarium Research Institute
+
+David W. Caress
+.br
+Monterey Bay Aquarium Research Institute
+
+Dale N. Chayes  
+.br
+Lamont-Doherty Earth Observatory
+
+.SH COPYRIGHT
+Copyright 2026 by David W. Caress and Dale N. Chayes.
+.br
+MB-System is distributed under the GNU General Public License version 3.
