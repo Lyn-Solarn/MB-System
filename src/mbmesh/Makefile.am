@@ -8,10 +8,10 @@ AM_CPPFLAGS += -I${top_srcdir}/src/utilities
 bin_PROGRAMS = mbmesh
 
 mbmesh_SOURCES = \
-	mbmesh.c \
-	mbmesh_core.c \
-	mbmesh_io.c \
-	mbmesh_geometry.c \
+	mbmesh.cpp \
+	mbmesh_core.cpp \
+	mbmesh_io.cpp \
+	mbmesh_geometry.cpp \
 	mbmesh.h
 
 mbmesh_LDADD = \
