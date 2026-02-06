@@ -1,13 +1,13 @@
 /*--------------------------------------------------------------------
- *    The MB-system:	mbmesh_io.c	2/5/2026
+ *    The MB-system:	mbmesh_io.cpp	2/5/2026
  *
  *    Input/output functions for mbmesh
  *--------------------------------------------------------------------*/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
 
 #include "mb_status.h"
 #include "mb_define.h"
@@ -55,8 +55,8 @@ int mbmesh_write_gmt(struct mbmesh_mesh *mesh, struct mbmesh_control *control) {
      * - Support geographic projections
      */
     
-    FILE *fp_vertices = NULL;
-    FILE *fp_triangles = NULL;
+    FILE *fp_vertices = nullptr;
+    FILE *fp_triangles = nullptr;
     char vertices_file[MB_PATH_MAXLINE];
     char triangles_file[MB_PATH_MAXLINE];
     int status = MB_SUCCESS;
@@ -87,7 +87,7 @@ int mbmesh_write_vtk(struct mbmesh_mesh *mesh, struct mbmesh_control *control) {
      * - Include bathymetry data as point or cell data
      */
     
-    FILE *fp = NULL;
+    FILE *fp = nullptr;
     int status = MB_SUCCESS;
     
     if (control->verbose >= 2)
@@ -95,7 +95,7 @@ int mbmesh_write_vtk(struct mbmesh_mesh *mesh, struct mbmesh_control *control) {
     
     /* TODO: Open output file */
     /* fp = fopen(control->output_file, "w"); */
-    /* if (fp == NULL) return MB_FAILURE; */
+    /* if (fp == nullptr) return MB_FAILURE; */
     
     /* TODO: Write VTK header */
     /* fprintf(fp, "# vtk DataFile Version 3.0\n"); */
@@ -131,7 +131,7 @@ int mbmesh_write_obj(struct mbmesh_mesh *mesh, struct mbmesh_control *control) {
      * - Generate accompanying .mtl file for materials
      */
     
-    FILE *fp = NULL;
+    FILE *fp = nullptr;
     int status = MB_SUCCESS;
     
     if (control->verbose >= 2)
@@ -159,7 +159,7 @@ int mbmesh_write_json(struct mbmesh_mesh *mesh, struct mbmesh_control *control) 
      * - Add metadata (bounds, quality metrics, etc.)
      */
     
-    FILE *fp = NULL;
+    FILE *fp = nullptr;
     int status = MB_SUCCESS;
     
     if (control->verbose >= 2)
