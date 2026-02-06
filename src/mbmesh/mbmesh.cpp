@@ -28,11 +28,11 @@
  * Date:	February 5, 2026
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <ctime>
 
 #include "mb_status.h"
 #include "mb_define.h"
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
     bool errflg = false;
     bool help = false;
     int c;
-    double *x_data = NULL, *y_data = NULL, *z_data = NULL;
+    double *x_data = nullptr, *y_data = nullptr, *z_data = nullptr;
     int ndata_points = 0;
     clock_t start_time, end_time;
     double cpu_time_used;
@@ -284,9 +284,9 @@ int main(int argc, char **argv) {
 
 cleanup:
     /* free allocated memory */
-    if (x_data != NULL) free(x_data);
-    if (y_data != NULL) free(y_data);
-    if (z_data != NULL) free(z_data);
+    if (x_data != nullptr) free(x_data);
+    if (y_data != nullptr) free(y_data);
+    if (z_data != nullptr) free(z_data);
     mbmesh_deallocate_mesh(&mesh);
 
     /* exit */

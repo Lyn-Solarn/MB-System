@@ -4,10 +4,10 @@
  *    Core mesh generation functions for mbmesh
  *--------------------------------------------------------------------*/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
 
 #include "mb_status.h"
 #include "mb_define.h"
@@ -53,7 +53,7 @@ int mbmesh_determine_file_format(const char *filename) {
 int mbmesh_read_xyz_file(const char *filename, double **x, double **y, double **z, int *npoints) {
     /* Read simple XYZ text file - basic implementation to get you started */
     FILE *fp = fopen(filename, "r");
-    if (fp == NULL) {
+    if (fp == nullptr) {
         fprintf(stderr, "ERROR: Cannot open file %s\n", filename);
         return MB_FAILURE;
     }
@@ -79,7 +79,7 @@ int mbmesh_read_xyz_file(const char *filename, double **x, double **y, double **
     *y = (double *)malloc(count * sizeof(double));
     *z = (double *)malloc(count * sizeof(double));
     
-    if (*x == NULL || *y == NULL || *z == NULL) {
+    if (*x == nullptr || *y == nullptr || *z == nullptr) {
         if (*x) free(*x);
         if (*y) free(*y);
         if (*z) free(*z);
@@ -393,7 +393,7 @@ int mbmesh_allocate_mesh(struct mbmesh_mesh *mesh, int nvertices, int ntriangles
     /* allocate vertex array */
     if (nvertices > 0) {
         mesh->vertices = (struct mbmesh_vertex *)calloc(nvertices, sizeof(struct mbmesh_vertex));
-        if (mesh->vertices == NULL) {
+        if (mesh->vertices == nullptr) {
             status = MB_FAILURE;
         }
     }
@@ -401,7 +401,7 @@ int mbmesh_allocate_mesh(struct mbmesh_mesh *mesh, int nvertices, int ntriangles
     /* allocate triangle array */
     if (ntriangles > 0 && status == MB_SUCCESS) {
         mesh->triangles = (struct mbmesh_triangle *)calloc(ntriangles, sizeof(struct mbmesh_triangle));
-        if (mesh->triangles == NULL) {
+        if (mesh->triangles == nullptr) {
             status = MB_FAILURE;
         }
     }
@@ -409,7 +409,7 @@ int mbmesh_allocate_mesh(struct mbmesh_mesh *mesh, int nvertices, int ntriangles
     /* allocate edge array */
     if (nedges > 0 && status == MB_SUCCESS) {
         mesh->edges = (struct mbmesh_edge *)calloc(nedges, sizeof(struct mbmesh_edge));
-        if (mesh->edges == NULL) {
+        if (mesh->edges == nullptr) {
             status = MB_FAILURE;
         }
     }
@@ -424,17 +424,17 @@ int mbmesh_allocate_mesh(struct mbmesh_mesh *mesh, int nvertices, int ntriangles
 /*--------------------------------------------------------------------*/
 int mbmesh_deallocate_mesh(struct mbmesh_mesh *mesh) {
     /* Free allocated mesh memory */
-    if (mesh->vertices != NULL) {
+    if (mesh->vertices != nullptr) {
         free(mesh->vertices);
-        mesh->vertices = NULL;
+        mesh->vertices = nullptr;
     }
-    if (mesh->triangles != NULL) {
+    if (mesh->triangles != nullptr) {
         free(mesh->triangles);
-        mesh->triangles = NULL;
+        mesh->triangles = nullptr;
     }
-    if (mesh->edges != NULL) {
+    if (mesh->edges != nullptr) {
         free(mesh->edges);
-        mesh->edges = NULL;
+        mesh->edges = nullptr;
     }
     
     mesh->nvertices = 0;

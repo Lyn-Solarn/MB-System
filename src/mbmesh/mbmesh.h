@@ -15,6 +15,10 @@
 #ifndef MBMESH_H_
 #define MBMESH_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "mb_define.h"
 #include "mb_status.h"
 #include "mb_io.h"
@@ -145,5 +149,8 @@ int mbmesh_segments_intersect(struct mbmesh_vertex *p1, struct mbmesh_vertex *q1
 int mbmesh_read_xyz_file(const char *filename, double **x, double **y, double **z, int *npoints);
 int mbmesh_determine_file_format(const char *filename);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* MBMESH_H_ */
