@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------
- *    The MB-system:	mbmesh_geometry.c	2/5/2026
+ *    The MB-system:	mbmesh_geometry.cpp	2/5/2026
  *
  *    Basic geometric functions for mbmesh
  *--------------------------------------------------------------------*/

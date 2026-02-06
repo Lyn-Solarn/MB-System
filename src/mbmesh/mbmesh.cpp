@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------
- *    The MB-system:	mbmesh.c	2/5/2026
+ *    The MB-system:	mbmesh.cpp	2/5/2026
  *
  *    Copyright (c) 2026-2026 by
  *    David W. Caress (caress@mbari.org)

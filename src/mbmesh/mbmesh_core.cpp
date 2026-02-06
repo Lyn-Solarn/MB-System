@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------
- *    The MB-system:	mbmesh_core.c	2/5/2026
+ *    The MB-system:	mbmesh_core.cpp	2/5/2026
  *
  *    Core mesh generation functions for mbmesh
  *--------------------------------------------------------------------*/
