@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>X3DOM Centered Scene</title>
+<link rel="stylesheet" href="https://www.x3dom.org/release/x3dom.css">  
+<script src="https://www.x3dom.org/release/x3dom.js"></script>  
+<style>
+html, body {
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#000000;
+}
+x3d {
+    width:100%;
+    height:100%;
+    border:none;
+}
+</style>
+</head>
+
+<body>
+
+
+<x3d>
+<scene>
+    <Inline url="root.glb"></Inline>
+    <!-- Interactive navigation modes -->
+    <navigationInfo type='"examine"' id="navType"></navigationInfo>
+
+    <!-- Proper centered camera -->
+    <viewpoint position="0 0 6"
+               centerOfRotation="0 0 0"
+               fieldOfView="0.8">
+    </viewpoint>
+
+    <background skyColor="0.08 0.08 0.1"></background>
+
+    <directionallight direction="-1 -1 -1" intensity="0.8"></directionallight>
+    <directionallight direction="1 -0.5 0.5" intensity="0.4"></directionallight>
+
+    <!-- Centered model -->
+    <transform translation="0 0 0">
+
+</scene>
+</x3d>
+
+</body>
+</body>
+</html>

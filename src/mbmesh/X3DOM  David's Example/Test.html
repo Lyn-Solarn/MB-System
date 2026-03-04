@@ -1,0 +1,29 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>X3DOM Animated Sphere Example</title>
+    <script src="http://www.x3dom.org/download/dev/x3dom.js"></script>
+    <link rel="stylesheet" href="http://www.x3dom.org/download/dev/x3dom.css">
+</head>
+<body>
+	<x3d width="500px" height="400px">
+		<scene>
+			<transform DEF="ball">
+				<shape>
+					<appearance>
+						<material diffuseColor="1 0 0"></material>
+					</appearance>
+					<sphere></sphere>
+				</shape>
+			</transform>
+			<timeSensor DEF="time" cycleInterval="2" loop="true"></timeSensor>
+			<PositionInterpolator DEF="move" key="0 0.5 1" keyValue="0 0 0  0 3 0  0 0 0"></PositionInterpolator>
+			<ROUTE fromNode="time" fromField="fraction_changed" toNode="move" toField="set_fraction"></ROUTE>
+			<ROUTE fromNode="move" fromField="value_changed" toNode="ball" toField="set_translation"></ROUTE>
+		</scene>
+	</x3d>
+</body>
+</html>
