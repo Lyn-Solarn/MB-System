@@ -5,6 +5,35 @@
 <title>X3DOM Centered Scene</title>
 <link rel="stylesheet" href="https://www.x3dom.org/release/x3dom.css">  
 <script src="https://www.x3dom.org/release/x3dom.js"></script>  
+
+<!-- Draco decoder for compressed glTF models -->
+<script src="https://www.gstatic.com/draco/versioned/decoders/1.5.6/draco_decoder.js"></script>
+
+<script>
+// Configures X3DOM to use Draco decoder
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.x3dom && x3dom.setDracoDecoderPath) {
+        x3dom.setDracoDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+    }
+});
+
+
+// Function to handle dropdown selection
+function changeModel() {
+    var dropdown = document.getElementById('modelSelector');
+    var selectedModel = dropdown.value;
+    
+    // Get the inline element and change its URL
+    var inline = document.querySelector('Inline');
+    inline.setAttribute('url', selectedModel);
+    
+    // Reload the scene
+    x3dom.reload();
+}
+
+
+</script>
+
 <style>
 html, body {
     margin:0;
@@ -19,10 +48,47 @@ x3d {
     height:100%;
     border:none;
 }
+
+
+/* Dropdown menu styling */
+.dropdown-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+}
+
+#modelSelector {
+    padding: 10px 15px;
+    font-size: 16px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid #333;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #333;
+    font-family: Arial, sans-serif;
+}
+
+#modelSelector:hover {
+    background-color: rgba(255, 255, 255, 1);
+}
+
+
 </style>
 </head>
 
 <body>
+
+
+<!-- Dropdown Menu -->
+<div class="dropdown-container">
+    <select id="modelSelector" onchange="changeModel()">
+        <option value="root.glb">Model 1 - Root</option>
+        <option value="model2.glb">Model 2</option>
+        <option value="model3.glb">Model 3</option>
+        <option value="another_model.glb">Model 4</option>
+    </select>
+</div>
 
 
 <x3d>
@@ -44,6 +110,7 @@ x3d {
 
     <!-- Centered model -->
     <transform translation="0 0 0">
+        </transform>
 
 </scene>
 </x3d>
