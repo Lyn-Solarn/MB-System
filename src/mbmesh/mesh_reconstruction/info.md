@@ -37,6 +37,25 @@ cd Open3D**
 
 **make install**
 
+## Run(example):
+**rm -rf build**
+
+**mkdir build**
+
+**cd build**
+
+**cmake ..**
+
+**make -j4**
+
+**./mesh_ballpivot yosemite_parsed20000_preprocessed.xyz output.stl**
+
+- working on adding to MB-System CMakeLists.txt and running full pipeline in one command: 
+
+swath -> data.xyz -> mesh.obj -> parent(.glb)+4children(.glb) -> ogc3-tile(data folder + .json config)
+
+- run example single command: mbmesh `<input-swath-folder>` `<ouput-folder>`
+
 # Research Update
 
 Original plan use CGAL math geometry library
