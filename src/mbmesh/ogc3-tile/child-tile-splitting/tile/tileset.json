@@ -1,0 +1,45 @@
+{
+  "asset": { "version": "1.0" },
+
+  "geometricError": 1000,
+
+  "root": {
+    "boundingVolume": {
+      "box": [13, 13, 17, 10, 0, 0, 0, 10, 0, 0, 0, 10]
+    },
+    "geometricError": 500,
+    "refine": "ADD",
+    "content": { "uri": "yosp2000_m20000.glb" },
+
+    "children": [
+      {
+        "boundingVolume": {
+          "box": [8, 8, 17, 5, 0, 0, 0, 5, 0, 0, 0, 5]
+        },
+        "geometricError": 0,
+        "content": { "uri": "tile_0.glb" }
+      },
+      {
+        "boundingVolume": {
+          "box": [18, 8, 17, 5, 0, 0, 0, 5, 0, 0, 0, 5]
+        },
+        "geometricError": 0,
+        "content": { "uri": "tile_1.glb" }
+      },
+      {
+        "boundingVolume": {
+          "box": [8, 18, 17, 5, 0, 0, 0, 5, 0, 0, 0, 5]
+        },
+        "geometricError": 0,
+        "content": { "uri": "tile_2.glb" }
+      },
+      {
+        "boundingVolume": {
+          "box": [18, 18, 17, 5, 0, 0, 0, 5, 0, 0, 0, 5]
+        },
+        "geometricError": 0,
+        "content": { "uri": "tile_3.glb" }
+      }
+    ]
+  }
+}
