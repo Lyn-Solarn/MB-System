@@ -449,6 +449,17 @@ static int read_swath_file(int verbose, char *file, int format,
       fprintf(stderr, "Error allocating beamflag array\n");
       return MB_FAILURE;
     }
+
+
+    // registers beamflag right after its successful allocation
+    //     status = mb_register_array(verbose, mbio_ptr, MB_MEM_TYPE_BATHYMETRY,
+    //                            sizeof(char), (void **)&beamflag, &error);
+    // if (status != MB_SUCCESS) {
+    //   fprintf(stderr, "Error registering beamflag array\n");
+    //   mb_freed(verbose, __FILE__, __LINE__, (void **)&beamflag, &error);
+    //   mb_close(verbose, &mbio_ptr, &error);
+    //   return MB_FAILURE;
+    // }
    
     // Allocate bath array
     status = mb_mallocd(verbose, __FILE__, __LINE__,
@@ -495,6 +506,25 @@ static int read_swath_file(int verbose, char *file, int format,
       mb_freed(verbose, __FILE__, __LINE__, (void **)&bathlat, &error);
       return MB_FAILURE;
     }
+
+    //Only allocate when amp array is present
+    // if (beams_amp > 0) {
+    //   status = mb_mallocd(verbose, __FILE__, __LINE__,
+    //                       beams_amp * sizeof(double),
+    //                       (void **)&amp, &error);
+    //   if (status != MB_SUCCESS) {
+    //     fprintf(stderr, "Error allocating amp array\n");
+    //     mb_freed(verbose, __FILE__, __LINE__, (void **)&beamflag, &error);
+    //     mb_freed(verbose, __FILE__, __LINE__, (void **)&bath, &error);
+    //     mb_freed(verbose, __FILE__, __LINE__, (void **)&bathlon, &error);
+    //     mb_freed(verbose, __FILE__, __LINE__, (void **)&bathlat, &error);
+    //     mb_close(verbose, &mbio_ptr, &error);
+    //     return MB_FAILURE;
+    //   }
+    // }
+
+
+
 
     // mb_get() always writes sidescan arrays, so allocate them when present.
     if (pixels_ss > 0) {
@@ -710,6 +740,8 @@ static int process_ping(int verbose, int beams_bath, char *beamflag,
                        double *bath, double *bathlon, double *bathlat,
                        double time_d) {
 
+  //Avoids an "unused parameter" warning for verbose
+  (void)verbose;
   // TODO #6: Process each beam in the ping
    
    // Loop through all beams and extract valid soundings.
