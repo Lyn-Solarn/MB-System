@@ -94,6 +94,9 @@ struct Sounding {
   double longitude;   // Degrees east
   double latitude;    // Degrees north
   double depth;       // Meters (negative = below sea level)
+  double ecef_x;      // ECEF X coordinate (meters)
+  double ecef_y;      // ECEF Y coordinate (meters)
+  double ecef_z;      // ECEF Z coordinate (meters)
   char beamflag;      // MB-System beam quality flag
   int beam_number;    // Beam index within ping
   double time_d;      // Unix timestamp (seconds since epoch)
@@ -134,9 +137,21 @@ static int read_datalist_file(int verbose);
 static int read_swath_file(int verbose, char *file, int format, double file_weight);
 static int process_ping(int verbose, int beams_bath, char *beamflag,
                        double *bath, double *bathlon, double *bathlat,
+                       double navlon, double navlat, double heading,
                        double time_d);
 static int write_xyz_file(const char *filename);
 static void print_statistics();
+static void geodetic_to_ecef(double lon_deg, double lat_deg, double height_m,
+                             double *x_m, double *y_m, double *z_m);
+static void local_offsets_to_geodetic(double ref_lon_deg, double ref_lat_deg,
+                                      double east_m, double north_m,
+                                      double *lon_deg, double *lat_deg);
+
+// WGS84 constants used for the local geodetic-to-ECEF conversion.
+constexpr double wgs84_a = 6378137.0;
+constexpr double wgs84_f = 1.0 / 298.257223563;
+constexpr double wgs84_e2 = wgs84_f * (2.0 - wgs84_f);
+constexpr double degrees_to_radians = M_PI / 180.0;
 
 /*--------------------------------------------------------------------*/
 /* MAIN FUNCTION */
@@ -183,6 +198,7 @@ int main(int argc, char **argv) {
   /* Write XYZ point cloud */
   char xyz_file[MB_PATH_MAXLINE];
   snprintf(xyz_file, sizeof(xyz_file), "%s/pointcloud.xyz", output_dir);
+  fprintf(stderr, "\nConverting soundings to ECEF coordinates...\n");
   write_xyz_file(xyz_file);
 
   fprintf(stderr, "\n=== Phase 1 Complete ===\n");
@@ -544,7 +560,8 @@ static int read_swath_file(int verbose, char *file, int format,
       data_records++;
       /* Process this ping */
       process_ping(verbose, beams_bath, beamflag,
-                  bath, bathacrosstrack, bathalongtrack, time_d);
+                  bath, bathacrosstrack, bathalongtrack,
+                  navlon, navlat, heading, time_d);
 
       /* Update global counter */
       npings++;
@@ -622,12 +639,14 @@ static int read_swath_file(int verbose, char *file, int format,
  */
 static int process_ping(int verbose, int beams_bath, char *beamflag,
                        double *bath, double *bathacrosstrack, double *bathalongtrack,
+                       double navlon, double navlat, double heading,
                        double time_d) {
 
   // Process each beam in the ping
    
-   // Loop through all beams and extract valid soundings.
-   // Calculate longitude and latitude from acrosstrack and alongtrack distances.
+  // Loop through all beams and extract valid soundings.
+  // Estimate each beam position from the vessel navigation and beam offsets,
+  // then convert the result to ECEF for downstream 3D use.
    
     for (int i = 0; i < beams_bath; i++) {
       // Count total beams
@@ -639,11 +658,21 @@ static int process_ping(int verbose, int beams_bath, char *beamflag,
         continue;  // Skip bad beam
       }
    
-      // Create sounding
+      double beam_lon = navlon;
+      double beam_lat = navlat;
+
+      // Approximate each beam position from vessel navigation plus beam offsets.
+      double heading_rad = heading * degrees_to_radians;
+      double east_m = bathalongtrack[i] * std::sin(heading_rad) + bathacrosstrack[i] * std::cos(heading_rad);
+      double north_m = bathalongtrack[i] * std::cos(heading_rad) - bathacrosstrack[i] * std::sin(heading_rad);
+      local_offsets_to_geodetic(navlon, navlat, east_m, north_m, &beam_lon, &beam_lat);
+
+      // Store both the geographic estimate and its ECEF representation.
       Sounding s;
-      s.longitude = bathacrosstrack[i];
-      s.latitude = bathalongtrack[i];
+      s.longitude = beam_lon;
+      s.latitude = beam_lat;
       s.depth = bath[i];
+      geodetic_to_ecef(s.longitude, s.latitude, -s.depth, &s.ecef_x, &s.ecef_y, &s.ecef_z);
       s.beamflag = beamflag[i];
       s.beam_number = i;
       s.time_d = time_d;
@@ -683,12 +712,12 @@ static int write_xyz_file(const char *filename) {
   fprintf(stderr, "\nWriting XYZ point cloud: %s\n", filename);
   fprintf(stderr, "  Points: %zu\n", all_soundings.size());
 
-  // Write header (optional)
-  fprintf(fp, "# X(lon) Y(lat) Z(depth)\n");
+  // This is a temporary debug-friendly XYZ export of the 3D point cloud.
+  fprintf(fp, "# X(ecef_m) Y(ecef_m) Z(ecef_m)\n");
 
   // Write points
   for (const auto &s : all_soundings) {
-    fprintf(fp, "%.8f %.8f %.3f\n", s.longitude, s.latitude, s.depth);
+    fprintf(fp, "%.3f %.3f %.3f\n", s.ecef_x, s.ecef_y, s.ecef_z);
   }
 
   fclose(fp);
@@ -761,4 +790,50 @@ static void print_statistics() {
   }
 
   fprintf(stderr, "\n");
+}
+
+/*--------------------------------------------------------------------*/
+/* COORDINATE CONVERSION HELPERS */
+/*--------------------------------------------------------------------*/
+
+static void geodetic_to_ecef(double lon_deg, double lat_deg, double height_m,
+                             double *x_m, double *y_m, double *z_m) {
+  // Standard WGS84 geodetic-to-ECEF conversion.
+  double lon_rad = lon_deg * degrees_to_radians;
+  double lat_rad = lat_deg * degrees_to_radians;
+
+  double sin_lat = std::sin(lat_rad);
+  double cos_lat = std::cos(lat_rad);
+  double sin_lon = std::sin(lon_rad);
+  double cos_lon = std::cos(lon_rad);
+
+  double prime_vertical = wgs84_a / std::sqrt(1.0 - wgs84_e2 * sin_lat * sin_lat);
+
+  if (x_m != nullptr)
+    *x_m = (prime_vertical + height_m) * cos_lat * cos_lon;
+  if (y_m != nullptr)
+    *y_m = (prime_vertical + height_m) * cos_lat * sin_lon;
+  if (z_m != nullptr)
+    *z_m = (prime_vertical * (1.0 - wgs84_e2) + height_m) * sin_lat;
+}
+
+static void local_offsets_to_geodetic(double ref_lon_deg, double ref_lat_deg,
+                                      double east_m, double north_m,
+                                      double *lon_deg, double *lat_deg) {
+  // Convert local meter offsets into a small-angle geodetic estimate.
+  double ref_lat_rad = ref_lat_deg * degrees_to_radians;
+
+  double meters_per_deg_lat =
+      111132.92 - 559.82 * std::cos(2.0 * ref_lat_rad) +
+      1.175 * std::cos(4.0 * ref_lat_rad) - 0.0023 * std::cos(6.0 * ref_lat_rad);
+
+  double meters_per_deg_lon =
+      111412.84 * std::cos(ref_lat_rad) -
+      93.5 * std::cos(3.0 * ref_lat_rad) +
+      0.118 * std::cos(5.0 * ref_lat_rad);
+
+  if (lat_deg != nullptr && meters_per_deg_lat != 0.0)
+    *lat_deg = ref_lat_deg + (north_m / meters_per_deg_lat);
+  if (lon_deg != nullptr && meters_per_deg_lon != 0.0)
+    *lon_deg = ref_lon_deg + (east_m / meters_per_deg_lon);
 }
