@@ -54,11 +54,16 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cerrno>
 #include <getopt.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <vector>
 #include <algorithm>
 
+// Mesh generation and GLB export
+#include "mesh_generator.h"
+#include "glb_writer.h"
 
 // MB-System includes
 extern "C" {
@@ -76,7 +81,7 @@ constexpr char help_message[] =
     "Phase 1 implementation reads and validates swath data input.";
 
 constexpr char usage_message[] =
-    "mbmesh -Idatalist [-Rwest/east/south/north] [-Ooutdir]\n"
+    "mbmesh -Idatalist [-Rwest/east/south/north] [-Ooutdir] [-Ddownsample]\n"
     "       [-V -H]";
 
 /*--------------------------------------------------------------------*/
@@ -115,6 +120,7 @@ static char read_datalist[MB_PATH_MAXLINE] = "datalist.mb-1";
 static char output_dir[MB_PATH_MAXLINE] = "./tileset";
 static bool bounds_specified = false;
 static double bounds[4] = {-180.0, 180.0, -90.0, 90.0};  // west, east, south, north
+static int downsample_factor = 1;  // 1 = no downsampling, N = keep 1 in N points
 
 // Statistics
 static int nfile = 0;               // Number of files in datalist
@@ -123,6 +129,7 @@ static int npings = 0;              // Total pings processed
 static int nbeams_total = 0;        // Total beams encountered
 static int nbeams_good = 0;         // Valid beams
 static int nbeams_flagged = 0;      // Flagged/rejected beams
+static uint64_t nbeams_in_bounds = 0; // Good beams that pass geographic bounds
 
 // Storage for soundings (in-memory for Phase 1)
 static std::vector<Sounding> all_soundings;
@@ -141,6 +148,7 @@ static int process_ping(int verbose, int beams_bath, char *beamflag,
                        double time_d);
 static int write_xyz_file(const char *filename);
 static void print_statistics();
+static int ensure_directory_exists(const char *path);
 static void geodetic_to_ecef(double lon_deg, double lat_deg, double height_m,
                              double *x_m, double *y_m, double *z_m);
 static void local_offsets_to_geodetic(double ref_lon_deg, double ref_lat_deg,
@@ -195,6 +203,11 @@ int main(int argc, char **argv) {
   fprintf(stderr, "\nSwath data reading complete\n");
   print_statistics();
 
+  if (ensure_directory_exists(output_dir) != MB_SUCCESS) {
+    fprintf(stderr, "\nProgram <%s> Terminated\n", program_name);
+    exit(MB_FAILURE);
+  }
+
   /* Write XYZ point cloud */
   char xyz_file[MB_PATH_MAXLINE];
   snprintf(xyz_file, sizeof(xyz_file), "%s/pointcloud.xyz", output_dir);
@@ -205,12 +218,41 @@ int main(int argc, char **argv) {
   fprintf(stderr, "Soundings collected: %zu\n", all_soundings.size());
   fprintf(stderr, "XYZ file written: %s\n", xyz_file);
 
-  /* TODO Phase 2: Build spatial index (octree/quadtree) from all_soundings */
-  /* TODO Phase 3: Generate triangle meshes from indexed soundings */
-  /* TODO Phase 4: Convert meshes to ECEF coordinates */
-  /* TODO Phase 5: Write OGC 3D Tiles output (tileset.json + .glb files) */
+  /* Phase 2-3: Generate mesh from point cloud and write GLB */
+  if (!all_soundings.empty()) {
+    /* Convert soundings to flat coordinate array for mesh generation */
+    std::vector<double> point_cloud;
+    point_cloud.reserve(all_soundings.size() * 3);
+    for (const auto& s : all_soundings) {
+      point_cloud.push_back(s.ecef_x);
+      point_cloud.push_back(s.ecef_y);
+      point_cloud.push_back(s.ecef_z);
+    }
+    
+    /* Generate mesh using greedy nearest-neighbor approach */
+    Mesh mesh = generate_greedy_mesh(point_cloud, 6, verbose);
 
-  fprintf(stderr, "\nReady for Phase 2 (spatial indexing)\n");
+    if (mesh.vertices.empty() || mesh.triangles.empty()) {
+      fprintf(stderr, "Mesh generation did not produce a valid surface; skipping GLB export.\n");
+    } else {
+    
+      /* Write mesh to GLB file */
+      char glb_file[MB_PATH_MAXLINE];
+      snprintf(glb_file, sizeof(glb_file), "%s/mesh.glb", output_dir);
+      int glb_status = write_glb_file(mesh, glb_file, verbose);
+
+      if (glb_status == 0 && verbose > 0) {
+        fprintf(stderr, "GLB file successfully written: %s\n", glb_file);
+      } else if (glb_status != 0) {
+        fprintf(stderr, "Failed to write GLB file: %s\n", glb_file);
+      }
+    }
+  }
+
+  /* TODO Phase 4: Build spatial index (octree) for multiple LOD tiles */
+  /* TODO Phase 5: Write OGC 3D Tiles tileset.json + multiple .glb files */
+
+  fprintf(stderr, "\nReady for Phase 4 (spatial indexing for LOD)\n");
   fprintf(stderr, "\nProgram <%s> completed successfully\n", program_name);
   exit(MB_SUCCESS);
 }
@@ -232,7 +274,7 @@ static int parse_options(int argc, char **argv) {
       {nullptr, 0, nullptr, 0}};
 
   /* Process command line options */
-  while ((c = getopt_long(argc, argv, "I:O:R:VvHh", long_options, &option_index)) != -1) {
+  while ((c = getopt_long(argc, argv, "I:O:R:D:VvHh", long_options, &option_index)) != -1) {
     switch (c) {
     case 0:
       /* Handle long options */
@@ -261,6 +303,11 @@ static int parse_options(int argc, char **argv) {
       }
       break;
 
+    case 'D':
+      sscanf(optarg, "%d", &downsample_factor);
+      if (downsample_factor < 1) downsample_factor = 1;
+      break;
+
     case 'V':
     case 'v':
       verbose++;
@@ -285,6 +332,32 @@ static int parse_options(int argc, char **argv) {
   return MB_SUCCESS;
 }
 
+static int ensure_directory_exists(const char *path) {
+  struct stat st;
+  if (stat(path, &st) == 0) {
+    if (S_ISDIR(st.st_mode)) {
+      return MB_SUCCESS;
+    }
+
+    fprintf(stderr, "Error: Output path exists but is not a directory: %s\n", path);
+    return MB_FAILURE;
+  }
+
+  if (mkdir(path, 0755) == 0) {
+    if (verbose > 0) {
+      fprintf(stderr, "Created output directory: %s\n", path);
+    }
+    return MB_SUCCESS;
+  }
+
+  if (errno == EEXIST) {
+    return MB_SUCCESS;
+  }
+
+  fprintf(stderr, "Error: Cannot create output directory %s: %s\n", path, strerror(errno));
+  return MB_FAILURE;
+}
+
 /*--------------------------------------------------------------------*/
 /* PRINT HELP MESSAGE */
 /*--------------------------------------------------------------------*/
@@ -297,6 +370,7 @@ static void print_help() {
   fprintf(stderr, "\nOptional:\n");
   fprintf(stderr, "  -O<outputdir>      Output directory [./tileset]\n");
   fprintf(stderr, "  -R<w/e/s/n>        Geographic bounds (degrees)\n");
+  fprintf(stderr, "  -D<factor>         Downsample good beams by keeping 1 in N [1]\n");
   fprintf(stderr, "  -V                 Increase verbosity (can repeat: -V -V)\n");
   fprintf(stderr, "  -H                 Print this help message\n");
   fprintf(stderr, "\nPhase 1 Implementation:\n");
@@ -683,6 +757,12 @@ static int process_ping(int verbose, int beams_bath, char *beamflag,
             s.latitude < bounds[2] || s.latitude > bounds[3]) {
           continue;  // Outside bounds, skip
         }
+      }
+
+      // Optional decimation of accepted beams to keep runtime manageable.
+      nbeams_in_bounds++;
+      if (downsample_factor > 1 && (nbeams_in_bounds % downsample_factor) != 0) {
+        continue;
       }
    
       // Add to collection
