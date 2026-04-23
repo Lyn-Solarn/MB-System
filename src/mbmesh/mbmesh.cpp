@@ -47,7 +47,6 @@
  * - Spatial indexing (quadtree/octree)
  * - Mesh generation
  * - 3D Tiles output
- * - ECEF coordinate conversion
  *--------------------------------------------------------------------*/
 
 #include <cmath>
@@ -97,9 +96,9 @@ struct Sounding {
   char beamflag;      // MB-System beam quality flag
   int beam_number;    // Beam index within ping
   double time_d;      // Unix timestamp (seconds since epoch)
-
-  // TODO Phase 4: Add ECEF coordinates for 3D Tiles (x, y, z)
-  // TODO Phase 3: Add amplitude, acrosstrack, alongtrack for mesh quality
+  double ecef_x;      // ECEF X (meters) 
+  double ecef_y;      // ECEF Y (meters) 
+  double ecef_z;      // ECEF Z (meters) 
 };
 
 /*--------------------------------------------------------------------*/
@@ -133,8 +132,8 @@ static int parse_options(int argc, char **argv);
 static int read_datalist_file(int verbose);
 static int read_swath_file(int verbose, char *file, int format, double file_weight);
 static int process_ping(int verbose, int beams_bath, char *beamflag,
-                       double *bath, double *bathlon, double *bathlat,
-                       double time_d);
+                       double *bath, double *bathacrosstrack, double *bathalongtrack,
+                       double time_d, double nav_lon, double nav_lat);
 static int write_xyz_file(const char *filename);
 static int write_projected_xyz_file(const char *filename);
 static void print_statistics();
@@ -197,7 +196,8 @@ int main(int argc, char **argv) {
   char ecef_file[MB_PATH_MAXLINE];
   snprintf(ecef_file, sizeof(ecef_file), "%s/ecefPointcloud.xyz", output_dir);
   write_ecef_xyz_file(ecef_file);
-
+  
+  fprintf(stderr, "ECEF XYZ file written: %s\n", ecef_file);  //  Match style
   fprintf(stderr, "\n=== Phase 1 Complete ===\n");
   fprintf(stderr, "Soundings collected: %zu\n", all_soundings.size());
   fprintf(stderr, "XYZ file written: %s\n", xyz_file);
@@ -244,47 +244,75 @@ static int write_ecef_xyz_file(const char *filename) {
     return MB_FAILURE;
   }
 
-  /* Compute centroid (same as projected) */
-  double sum_lon = 0.0, sum_lat = 0.0, sum_depth = 0.0;
-  for (const auto &s : all_soundings) {
-    sum_lon += s.longitude;
-    sum_lat += s.latitude;
-    sum_depth += s.depth;
-  }
-  double ref_lon = sum_lon / all_soundings.size();
-  double ref_lat = sum_lat / all_soundings.size();
-  double ref_depth = sum_depth / all_soundings.size();
-
   FILE *fp = fopen(filename, "w");
   if (!fp) {
     fprintf(stderr, "Error: Cannot create ECEF XYZ file: %s\n", filename);
     return MB_FAILURE;
   }
 
-  // User-facing output, matching other point cloud writers
-  // [ADDED] Print file name and number of points for ECEF output
   fprintf(stderr, "\nWriting ECEF XYZ point cloud: %s\n", filename);
   fprintf(stderr, "  Points: %zu\n", all_soundings.size());
 
   /* Write header */
   fprintf(fp, "# X(m) Y(m) Z(m) - ECEF coordinates (WGS84)\n");
-  fprintf(fp, "# Reference: lon=%.8f lat=%.8f depth=%.3f\n",
-          ref_lon, ref_lat, ref_depth);
 
-  /* Write ECEF points */
+  /* Write precomputed ECEF points */
   for (const auto &s : all_soundings) {
-    double x, y, z;
-    // Note: depth is positive down, so height = -depth
-    geodetic_to_ecef(s.longitude, s.latitude, -s.depth, &x, &y, &z);
-    fprintf(fp, "%.3f %.3f %.3f\n", x, y, z);
+    fprintf(fp, "%.3f %.3f %.3f\n", s.ecef_x, s.ecef_y, s.ecef_z);
   }
 
   fclose(fp);
-  // [ADDED] Print success message and file location for ECEF output
   fprintf(stderr, "  ECEF XYZ file written successfully\n");
   fprintf(stderr, "  Location: %s\n", filename);
   return MB_SUCCESS;
 }
+// static int write_ecef_xyz_file(const char *filename) {
+//   if (all_soundings.empty()) {
+//     fprintf(stderr, "Warning: No soundings to write ECEF XYZ file\n");
+//     return MB_FAILURE;
+//   }
+
+//   /* Compute centroid (same as projected) */
+//   double sum_lon = 0.0, sum_lat = 0.0, sum_depth = 0.0;
+//   for (const auto &s : all_soundings) {
+//     sum_lon += s.longitude;
+//     sum_lat += s.latitude;
+//     sum_depth += s.depth;
+//   }
+//   double ref_lon = sum_lon / all_soundings.size();
+//   double ref_lat = sum_lat / all_soundings.size();
+//   double ref_depth = sum_depth / all_soundings.size();
+
+//   FILE *fp = fopen(filename, "w");
+//   if (!fp) {
+//     fprintf(stderr, "Error: Cannot create ECEF XYZ file: %s\n", filename);
+//     return MB_FAILURE;
+//   }
+
+//   // User-facing output, matching other point cloud writers
+//   // [ADDED] Print file name and number of points for ECEF output
+//   fprintf(stderr, "\nWriting ECEF XYZ point cloud: %s\n", filename);
+//   fprintf(stderr, "  Points: %zu\n", all_soundings.size());
+
+//   /* Write header */
+//   fprintf(fp, "# X(m) Y(m) Z(m) - ECEF coordinates (WGS84)\n");
+//   fprintf(fp, "# Reference: lon=%.8f lat=%.8f depth=%.3f\n",
+//           ref_lon, ref_lat, ref_depth);
+
+//   /* Write ECEF points */
+//   for (const auto &s : all_soundings) {
+//     double x, y, z;
+//     // Note: depth is positive down, so height = -depth
+//     geodetic_to_ecef(s.longitude, s.latitude, -s.depth, &x, &y, &z);
+//     fprintf(fp, "%.3f %.3f %.3f\n", x, y, z);
+//   }
+
+//   fclose(fp);
+//   // [ADDED] Print success message and file location for ECEF output
+//   fprintf(stderr, "  ECEF XYZ file written successfully\n");
+//   fprintf(stderr, "  Location: %s\n", filename);
+//   return MB_SUCCESS;
+// }
 
 /*--------------------------------------------------------------------*/
 /* PARSE COMMAND-LINE OPTIONS */
@@ -631,7 +659,7 @@ static int read_swath_file(int verbose, char *file, int format,
       data_records++;
       /* Process this ping */
       process_ping(verbose, beams_bath, beamflag,
-                  bath, bathacrosstrack, bathalongtrack, time_d);
+                  bath, bathacrosstrack, bathalongtrack, time_d, navlon, navlat);
 
       /* Update global counter */
       npings++;
@@ -709,7 +737,7 @@ static int read_swath_file(int verbose, char *file, int format,
  */
 static int process_ping(int verbose, int beams_bath, char *beamflag,
                        double *bath, double *bathacrosstrack, double *bathalongtrack,
-                       double time_d) {
+                       double time_d, double nav_lon, double nav_lat) {
 
   // Process each beam in the ping
    
@@ -728,12 +756,15 @@ static int process_ping(int verbose, int beams_bath, char *beamflag,
    
       // Create sounding
       Sounding s;
-      s.longitude = bathacrosstrack[i];
-      s.latitude = bathalongtrack[i];
+      s.longitude = nav_lon;
+      s.latitude = nav_lat;
       s.depth = bath[i];
       s.beamflag = beamflag[i];
       s.beam_number = i;
       s.time_d = time_d;
+
+      // Computes ECEF immediately (height = -depth)
+      geodetic_to_ecef(s.longitude, s.latitude, -s.depth, &s.ecef_x, &s.ecef_y, &s.ecef_z);
    
       // Filter by geographic bounds if specified
       if (bounds_specified) {
