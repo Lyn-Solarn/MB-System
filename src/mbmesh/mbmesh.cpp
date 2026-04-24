@@ -202,6 +202,7 @@ int main(int argc, char **argv) {
   fprintf(stderr, "Soundings collected: %zu\n", all_soundings.size());
   fprintf(stderr, "XYZ file written: %s\n", xyz_file);
   fprintf(stderr, "Adjusted XYZ file written: %s\n", projected_file);
+  fprintf(stderr, "ECEF XYZ file written: %s\n", ecef_file);
 
   /* TODO Phase 2: Build spatial index (octree/quadtree) from all_soundings */
   /* TODO Phase 3: Generate triangle meshes from indexed soundings */
